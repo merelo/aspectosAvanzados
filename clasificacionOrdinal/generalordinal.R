@@ -12,9 +12,9 @@ clasifOrdinal<-function(train,test,modelo){
   clase<-length(train)
   nomClases<-levels(train[,clase])
   nClases<-length(nomClases)
-  datos<-data.frame(matrix(nrow=length(test),ncol=0))
+  datos<-data.frame(matrix(nrow=nrow(test),ncol=0))
   trainAux<-train
-  probabilidad<-data.frame(matrix(nrow=length(test),ncol=0))
+  probabilidad<-data.frame(matrix(nrow=nrow(test),ncol=0))
   for(i in 1:(nClases-1)){
     cero<-which(trainAux[clase]==0)
     trainAux[clase]<-factor(ifelse(train[,clase]==nomClases[i],0,1))
@@ -33,6 +33,8 @@ clasifOrdinal<-function(train,test,modelo){
   apply(probabilidad,1,function(x,nom){nom[which(x==max(x))]},nomClases)
 }
 datt<-clasifOrdinal(train,test,out1~.)
-test$out1
-datt<-factor(datt)
+
+#prediccion frente a clase real
 table(datt,test$out1)
+#% acierto en la clasificacion
+print(paste("Acierto: ",sum(datt==test$out1)/length(datt)*100,"%",sep=""))
