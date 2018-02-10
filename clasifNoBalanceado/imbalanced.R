@@ -135,13 +135,78 @@ syntheticInstance <- function(x, neighbors, data){
   y<-neighbors[sample(1:length(neighbors),1)]
   porcentaje<-runif(1,min=0,max=1)
   
-  sapply(1:ncol(data),function(col,x,y,data,porcentaje){
-    if(class(data[x,col])!="factor")
-      (abs(abs(train[x,col])-abs(train[y,col]))*porcentaje)+min(c(train[x,col],train[y,col]))
-    else
+  xx<-(abs(abs(data[x,1])-abs(data[y,1]))*porcentaje)+min(c(data[x,1],data[y,1]))
+  resp<-sapply(2:ncol(data),function(col,x,y,data,porcentaje,xx){
+    if(class(data[x,col])!="factor"){
+      pend<-(data[x,col]-data[y,col])/(data[x,1]-data[y,1])
+      b<-data[x,col]-data[x,1]*pend
+      ifelse(data[x,1]==data[y,1],data[y,1],pend*xx+b)
+    }else
       ifelse(porcentaje<0.5,data[x,col],data[y,col])
       #sample(c(data[x,col],data[y,col]),1)
-  },x,y,data,porcentaje)
+    c(data[x,col],data[y,col],data[x,1],data[y,1])
+  },x,y,data,porcentaje,xx)
+  c(xx,resp)
 }
 
-syntheticInstance(1,getNeighbors(1,c(2),train),train)
+syntheticInstance(1,getNeighbors(1,c(2,3,4,5),train),train)
+
+
+# SMOTE
+knn.pred = NULL
+for( i in 1:5){
+  
+  train <- subclus[-CVperm[,i], -3]
+  classes.train <- subclus[-CVperm[,i], 3] 
+  test  <- subclus[CVperm[,i], -3]
+  
+  # randomly oversample the minority class (class 0)
+  minority.indices <- (1:dim(train)[1])[classes.train == 0]
+  to.add <- dim(train)[1] - 2 * length(minority.indices)
+  duplicate <- sample(minority.indices, to.add, replace = T)
+  for( j in 1:length(duplicate)){
+    train <- rbind(train, syntheticInstance(duplicate[j],getNeighbors(duplicate[j],minority.indices,train),train))
+    classes.train <- c(classes.train, 0)
+  }  
+  
+  # use the modified training set to make predictions
+  predictions <-  knn(train, test, classes.train, k = 3)
+  knn.pred <- c(knn.pred, predictions)
+}
+tpr.SMOTE <- sum(subclus$Class[as.vector(CVperm)] == 0 & knn.pred == 1) / nClass0
+tnr.SMOTE <- sum(subclus$Class[as.vector(CVperm)] == 1 & knn.pred == 2) / nClass1
+gmean.SMOTE <- sqrt(tpr.SMOTE * tnr.SMOTE)
+
+gmean.ROS
+gmean.RUS
+gmean.SMOTE #comparando los tres metodos, vemos que SMOTE mejora los otros dos en nuestro caso
+
+# Visualization (SMOTE on the full dataset)
+classes.train <- subclus[, 3] 
+subclus.SMOTE <- subclus
+minority.indices <- (1:dim(subclus.SMOTE)[1])[classes.train == 0]
+trainTot<-subclus[-3]
+to.add <- dim(trainTot)[1] - 2 * length(minority.indices)
+duplicate <- sample(minority.indices, to.add, replace = T)
+classes.trainTot<-c()
+
+# subclus[3,] #290 -57
+# subclus[14,] #288 -84
+# subclus[8,] #289 4
+# subclus[17,] #
+# subclus[16,] #288 -84
+# subclus[6,] #288 -84
+# plot(matrix(c(196,-81,258,1,280,6,289,4,290,-57,288,-84,syntheticInstance(3,getNeighbors(3,minority.indices,trainTot),trainTot)),ncol=2,byrow=TRUE),col=c("blue","blue","blue","blue","black","blue","red"))
+
+
+for( j in 1:length(duplicate)){
+  trainTot <- rbind(trainTot, syntheticInstance(duplicate[j],getNeighbors(duplicate[j],minority.indices,trainTot),trainTot))
+  classes.trainTot <- c(classes.trainTot, 2) #le atribuimos una clase nueva simplemente para que se vean los nuevos valores imputados a la clase 0
+}  
+subclus.SMOTE <- cbind(trainTot,c(subclus$Class,classes.trainTot))
+names(subclus.SMOTE)<-c("Att1","Att2","Class")
+
+plot(subclus.SMOTE$Att1, subclus.SMOTE$Att2)
+points(subclus.SMOTE[subclus.SMOTE$Class==0,1],subclus.SMOTE[subclus.SMOTE$Class==0,2],col="red")
+points(subclus.SMOTE[subclus.SMOTE$Class==1,1],subclus.SMOTE[subclus.SMOTE$Class==1,2],col="blue") 
+points(subclus.SMOTE[subclus.SMOTE$Class==2,1],subclus.SMOTE[subclus.SMOTE$Class==2,2],col="green") #imputaciones con SMOTE de la clase 0

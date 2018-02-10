@@ -1,5 +1,3 @@
-#circle
-
 # imbalanced.R
 # Implementation and evaluation of imbalanced classification techniques 
 # Programming code courtesy by Sarah Vluymans, Sarah.Vluymans@UGent.be
