@@ -19,9 +19,10 @@ result<-cbind(result,dataAugm[,2])
 names(result)<-c("n_intentos","sinDA","conDA")
 
 diferencia<-result$conDA-result$sinDA
-resultado<-ifelse(diferencia>0,"mejora","empeora")
+resultado<-ifelse(diferencia>0,"mejora",ifelse(diferencia==0,"igual","empeora"))
 result<-cbind(result,diferencia,resultado)
 
 table(resultado)
 sum(diferencia)
 #names(result)<-c(names(result),"diferencia")
+write.xlsx(result,"resultadosDeepLearning.xlsx")
